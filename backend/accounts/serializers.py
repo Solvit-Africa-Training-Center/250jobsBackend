@@ -35,7 +35,6 @@ class LoginSerializer(serializers.Serializer):
         except User.DoesNotExist:
             raise serializers.ValidationError("Invalid credentials")
 
-        # authenticate requires username, so we pass the username of that email
         user = authenticate(username=user_obj.username, password=password)
         if not user:
             raise serializers.ValidationError("Invalid credentials")
