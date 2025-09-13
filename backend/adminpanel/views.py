@@ -33,11 +33,9 @@ class TechnicianProfileAdminViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
     filterset_fields = ["is_approved", "location", "years_experience"]
     search_fields = ["user__username", "user__email", "location", "skills__name"]
-    # Read-only for CRUD, but allow POST for custom actions (approve/pause/resume/revoke)
     http_method_names = ["get", "post", "head", "options"]
 
     def get_serializer_class(self):
-        # For action endpoints, show only minimal, read-only fields to avoid confusing inputs
         if getattr(self, "action", None) in {"approve", "revoke", "pause", "resume"}:
             return TechnicianAdminMinimalSerializer
         return super().get_serializer_class()
@@ -50,9 +48,7 @@ class TechnicianProfileAdminViewSet(viewsets.ModelViewSet):
 
         profile = self.get_object()
         profile.is_approved = True
-        # Start 30-day trial from approval time
         profile.trial_ends_at = timezone.now() + timedelta(days=30)
-        # Ensure not paused on approval
         profile.is_paused = False
         profile.save(update_fields=["is_approved", "trial_ends_at", "is_paused"])
         return response.Response({
@@ -95,25 +91,6 @@ class TechnicianProfileAdminViewSet(viewsets.ModelViewSet):
         return response.Response(ser.data)
 
 
-class JobAdminViewSet(viewsets.ModelViewSet):
-    # Removed per scope simplification
-    pass
-
-
-class JobApplicationAdminViewSet(viewsets.ModelViewSet):
-    # Removed per scope simplification
-    pass
-
-
-class PaymentAdminViewSet(viewsets.ModelViewSet):
-    # Removed per scope simplification
-    pass
-
-
-    # Removed per scope simplification
-    pass
-
-
 class SubscriptionAdminViewSet(viewsets.ModelViewSet):
     queryset = Subscription.objects.select_related("user", "plan").all()
     serializer_class = SubscriptionAdminSerializer
@@ -121,7 +98,7 @@ class SubscriptionAdminViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
     search_fields = ["user__username", "plan__name"]
     filterset_fields = ["status", "plan", "user"]
-    http_method_names = ["get", "head", "options"]  # read-only for admin
+    http_method_names = ["get", "head", "options"]
 
 
 class AnalyticsViewSet(viewsets.ViewSet):

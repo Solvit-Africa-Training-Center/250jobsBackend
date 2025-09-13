@@ -18,7 +18,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close(code=4401)
             return
         
-        # Ensure the user is a participant of the room
         is_member = await self._user_in_room(self.user.id, int(self.room_id))
         if not is_member:
             await self.close(code=4403)

@@ -14,7 +14,7 @@ from jobs.models import Job, JobApplication
 from jobs.serializers import JobApplicationSerializer
 from rest_framework import serializers as drf_serializers
 
-# PUBLIC: List technicians (approved only) with pagination, filter, search
+
 class TechnicianListView(generics.ListAPIView):
     serializer_class = TechnicianListSerializer
     permission_classes = [permissions.AllowAny]
@@ -37,21 +37,19 @@ class TechnicianListView(generics.ListAPIView):
             .select_related("user").prefetch_related("skills").distinct()
         )
 
-# PUBLIC: Detail page for a technician
+
 class TechnicianDetailView(generics.RetrieveAPIView):
     queryset = TechnicianProfile.objects.filter(is_approved=True).select_related("user").prefetch_related("skills")
     serializer_class = TechnicianDetailSerializer
     permission_classes = [permissions.AllowAny]
 
-# TECHNICIAN: My profile (create-once via signal elsewhere), view & update
+
 class MyTechnicianProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = TechnicianProfileEditSerializer
     permission_classes = [IsTechnician]
 
     def get_object(self):
-        # Ensure a technician profile exists for the authenticated technician
         profile, _ = TechnicianProfile.objects.get_or_create(user=self.request.user)
-        # Auto-pause if trial expired and no active subscription; unpause if active
         try:
             from payments.models import Subscription
             now = timezone.now()
@@ -75,7 +73,6 @@ class TechnicianReviewsView(generics.ListAPIView):
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
-        # When generating swagger schema, there is no URL kwarg
         if getattr(self, "swagger_fake_view", False):
             return Review.objects.none()
         tech_id = self.kwargs.get("pk")
@@ -89,7 +86,7 @@ class TechnicianReviewsView(generics.ListAPIView):
         )
 
 
-# TECHNICIAN: apply to a job
+
 class TechnicianApplyToJobView(generics.CreateAPIView):
     serializer_class = JobApplicationSerializer
     permission_classes = [IsTechnician]
@@ -106,7 +103,7 @@ class TechnicianApplyToJobView(generics.CreateAPIView):
             raise drf_serializers.ValidationError({"detail": "You have already applied to this job."})
 
 
-# TECHNICIAN: my applications
+
 class TechnicianMyApplicationsView(generics.ListAPIView):
     serializer_class = JobApplicationSerializer
     permission_classes = [IsTechnician]

@@ -194,8 +194,6 @@ def stripe_webhook(request):
 
     return HttpResponse(status=200)
 
-
-
 class MySubscriptionsView(views.APIView):
     permission_classes = [IsTechnician]
 

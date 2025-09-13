@@ -17,19 +17,18 @@ from jobs.models import Job, JobApplication
 from jobs.serializers import JobSerializer, JobCreateUpdateSerializer, JobApplicationSerializer
 from django.utils import timezone
 
-# Employer profile: view/update
 class MyEmployerProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = EmployerProfileSerializer
     permission_classes = [IsEmployer]
     def get_object(self):
-        # Create a minimal employer profile if missing
+        # Get or create an EmployerProfile
         obj, _ = EmployerProfile.objects.get_or_create(
             user=self.request.user,
             defaults={"company_name": self.request.user.username or ""},
         )
         return obj
 
-# Employers can browse all technicians (same features as public list, but authenticated & without approval constraint if you prefer)
+
 class EmployerTechnicianListView(generics.ListAPIView):
     serializer_class = TechnicianMiniSerializer
     permission_classes = [IsEmployer]
@@ -41,7 +40,6 @@ class EmployerTechnicianListView(generics.ListAPIView):
     ordering = ["-rating_avg"]
 
     def get_queryset(self):
-        # Employers see only "available" technicians: approved, not paused, and active (trial or subscription)
         now = timezone.now()
         return (
             TechnicianProfile.objects
@@ -53,12 +51,12 @@ class EmployerTechnicianListView(generics.ListAPIView):
             .select_related("user").prefetch_related("skills").distinct()
         )
 
-# Post a job (saved to Jobs app)
+
 class EmployerPostJobView(generics.CreateAPIView):
     serializer_class = JobCreateSerializer
     permission_classes = [IsEmployer]
 
-# All applicants across my jobs (with filtering)
+
 class EmployerApplicantsListView(generics.ListAPIView):
     serializer_class = EmployerApplicationSerializer
     permission_classes = [IsEmployer]
@@ -76,7 +74,7 @@ class EmployerApplicantsListView(generics.ListAPIView):
             .order_by("-created_at")
 
 
-# Employer: list my jobs
+
 class EmployerMyJobsView(generics.ListAPIView):
     serializer_class = JobSerializer
     permission_classes = [IsEmployer]
@@ -92,7 +90,7 @@ class EmployerMyJobsView(generics.ListAPIView):
             .order_by("-created_at")
 
 
-# Employer: retrieve/update/delete one of my jobs
+
 class EmployerJobDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = JobCreateUpdateSerializer
     permission_classes = [IsEmployer]
@@ -103,11 +101,11 @@ class EmployerJobDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Job.objects.filter(employer=self.request.user)
 
 
-# Employer: leave a review for a technician
+
 class EmployerCreateReviewView(generics.CreateAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [IsEmployer]
-    # Avoid DRF assertion during schema generation
+    
     def get_queryset(self):
         return Review.objects.none()
 
@@ -118,7 +116,7 @@ class EmployerCreateReviewView(generics.CreateAPIView):
             ctx["technician"] = tech
         return ctx
 
-# Status transitions: pending/shortlist/hire/reject on applications
+
 @api_view(["POST"])
 @permission_classes([IsEmployer])
 def set_application_status(request, application_id: int, new_status: str):
@@ -126,7 +124,7 @@ def set_application_status(request, application_id: int, new_status: str):
     POST /api/employers/applicants/<id>/status/<PENDING|APPLIED|SHORTLISTED|HIRED|REJECTED>/
     """
     valid = {JobApplication.APPLIED, JobApplication.SHORTLISTED, JobApplication.HIRED, JobApplication.REJECTED}
-    # We also accept "PENDING" synonym -> map to APPLIED
+    
     if new_status.upper() == "PENDING":
         new_status = JobApplication.APPLIED
     if new_status not in valid:
@@ -138,11 +136,10 @@ def set_application_status(request, application_id: int, new_status: str):
         return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
     app.status = new_status
-    # optional timestamps
+    
     if new_status == JobApplication.SHORTLISTED:
         app.shortlisted_at = timezone.now()
     if new_status == JobApplication.HIRED:
         app.hired_at = timezone.now()
-        # optionally: app.job.is_active = False; app.job.save(update_fields=["is_active"])
     app.save()
     return Response({"ok": True, "status": app.status, "application_id": app.id})
