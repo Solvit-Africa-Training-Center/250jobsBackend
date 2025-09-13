@@ -13,9 +13,11 @@ daphne==4.1.2
 defusedxml==0.7.1
 Django==5.2.5
 django-cors-headers==4.7.0
+django-filter==24.3
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 djoser==2.3.3
+drf-nested-routers==0.95.0
 drf-yasg==1.21.10
 hyperlink==21.0.0
 idna==3.10
@@ -25,6 +27,7 @@ msgpack==1.1.1
 oauthlib==3.3.1
 packaging==25.0
 pillow==11.3.0
+py-localtunnel==1.0.3
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pycparser==2.22
@@ -41,6 +44,7 @@ setuptools==80.9.0
 social-auth-app-django==5.5.1
 social-auth-core==4.7.0
 sqlparse==0.5.3
+stripe==12.5.1
 Twisted==25.5.0
 txaio==25.6.1
 typing_extensions==4.15.0

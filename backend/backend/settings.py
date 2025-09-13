@@ -17,6 +17,20 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load .env (simple loader) so os.getenv works in dev without external tools
+ENV_PATH = BASE_DIR.parent / ".env"
+if ENV_PATH.exists():
+    try:
+        for _line in ENV_PATH.read_text().splitlines():
+            line = _line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            v = v.strip().strip('"').strip("'")
+            os.environ.setdefault(k.strip(), v)
+    except Exception:
+        pass
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -27,7 +41,7 @@ SECRET_KEY = 'django-insecure-ao0lf@cd#@s5oi9kjxuo94h2#k(4n-js9&qw@owwo8%h0dg9^l
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -43,10 +57,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
+    'jobs',
+    'employers',
+    "django_filters",
+    'djoser',
     'corsheaders',
     'accounts',
     'chat',
     'drf_yasg',
+    'technicians',
+    'payments',
+    'adminpanel',
 ]
 
 MIDDLEWARE = [
@@ -67,7 +88,7 @@ ROOT_URLCONF = 'backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -134,6 +155,20 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Email configuration (loaded from environment if provided)
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '0') or 0)
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() in ('1', 'true', 'yes')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no-reply@example.com')
+
+# Password reset redirect targets
+FRONTEND_RESET_URL = os.getenv('FRONTEND_RESET_URL')
+BACKEND_RESET_URL = os.getenv('BACKEND_RESET_URL')
+
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -157,12 +192,24 @@ AUTH_USER_MODEL = 'accounts.User'
 
 ASGI_APPLICATION = "backend.asgi.application"  # NEW (project package is "backend")
 
-# Channel layer via Redis
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1")],
+# Channel layers
+# Prefer Redis in production if channels_redis is available, otherwise fall back to in-memory for dev/tests.
+try:
+    import channels_redis  # noqa: F401
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1")],
+            },
         },
-    },
-}
+    }
+except Exception:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
+    }
+
+
+
