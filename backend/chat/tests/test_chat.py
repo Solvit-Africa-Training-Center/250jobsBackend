@@ -3,10 +3,17 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from chat.models import Room, Message
+from django.test.utils import override_settings
 
 User = get_user_model()
 
 
+CHANNEL_LAYERS_TEST = {
+    "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
+}
+
+
+@override_settings(CHANNEL_LAYERS=CHANNEL_LAYERS_TEST)
 class ChatTests(APITestCase):
     def setUp(self):
         self.employer = User.objects.create_user(username="employer", email="employer@example.com", password="password123", role="employer")
