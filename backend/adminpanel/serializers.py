@@ -36,7 +36,6 @@ class UserAdminSerializer(serializers.ModelSerializer):
         if password:
             user.set_password(password)
         else:
-            # set unusable if not provided, to avoid plain-text default
             user.set_unusable_password()
         user.save()
         return user
@@ -84,11 +83,9 @@ class TechnicianProfileAdminSerializer(serializers.ModelSerializer):
 
     def get_has_active_subscription(self, obj):
         now = timezone.now()
-        # Trial valid?
         on_trial = bool(obj.trial_ends_at and obj.trial_ends_at >= now)
         if on_trial:
             return True
-        # Active subscription
         return Subscription.objects.filter(
             user=obj.user,
             status=Subscription.Status.ACTIVE,
@@ -104,9 +101,6 @@ class TechnicianAdminMinimalSerializer(serializers.ModelSerializer):
         fields = ["id", "user_username"]
         read_only_fields = ["id", "user_username"]
 
-
-
-# Removed admin serializers for Jobs/Applications/Payments/Reports per updated scope
 
 
 class SubscriptionAdminSerializer(serializers.ModelSerializer):

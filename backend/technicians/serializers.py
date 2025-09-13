@@ -51,10 +51,9 @@ class TechnicianDetailSerializer(serializers.ModelSerializer):
         ]
 
 class TechnicianProfileEditSerializer(serializers.ModelSerializer):
-    # Provide skills by names only; create any that don't exist
     skill_names = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
     years_experience = serializers.IntegerField(min_value=0, max_value=60, required=False)
-    # Read-only for consistency with list/detail
+    
     id = serializers.IntegerField(read_only=True)
     first_name = serializers.CharField(source="user.first_name", required=False, allow_blank=True)
     last_name = serializers.CharField(source="user.last_name", required=False, allow_blank=True)
@@ -88,7 +87,6 @@ class TechnicianProfileEditSerializer(serializers.ModelSerializer):
         }
 
     def update(self, instance, validated_data):
-        # Handle nested user fields
         user_data = validated_data.pop("user", {})
         first_name = user_data.get("first_name")
         last_name = user_data.get("last_name")
@@ -129,7 +127,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        # technician provided via view context; reviewer is request.user
         technician_profile = self.context.get("technician")
         if not technician_profile:
             raise serializers.ValidationError({"technician": "Technician not found or not provided"})

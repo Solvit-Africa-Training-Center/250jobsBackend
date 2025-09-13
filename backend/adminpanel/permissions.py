@@ -8,6 +8,5 @@ class IsAdminRoleOrStaff(BasePermission):
         user = request.user
         if not user or not user.is_authenticated:
             return False
-        # Accept either Django staff/superuser or custom role 'admin'
         return bool(getattr(user, "is_staff", False) or getattr(user, "is_superuser", False) or getattr(user, "role", None) == "admin")
 

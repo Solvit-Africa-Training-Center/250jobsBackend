@@ -31,9 +31,7 @@ class Subscription(models.Model):
         EXPIRED = "EXPIRED", "Expired"
         CANCELED = "CANCELED", "Canceled"
 
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="subscriptions"
-    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="subscriptions")
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, related_name="subscriptions")
     start_date = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField()

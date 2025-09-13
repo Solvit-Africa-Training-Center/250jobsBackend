@@ -28,7 +28,7 @@ def ensure_default_subscription_plans(sender, **kwargs):
                 "currency": d["currency"],
             },
         )
-        # Optionally attach Stripe price ids from environment variables
+        
         price_env = None
         if d["duration_months"] == 1:
             price_env = os.getenv("STRIPE_PRICE_MONTHLY")

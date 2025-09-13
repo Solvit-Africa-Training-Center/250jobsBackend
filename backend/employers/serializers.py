@@ -24,7 +24,6 @@ class TechnicianMiniSerializer(serializers.ModelSerializer):
         model = TechnicianProfile
         fields = ["first_name","last_name","location","years_experience","rating_avg","rating_count","skills","is_approved"]
 
-# Job create for employer (saved in Jobs app)
 class JobCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Job
@@ -35,7 +34,6 @@ class JobCreateSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         return Job.objects.create(employer=user, **validated_data)
 
-# Applications (employer view)
 class EmployerApplicationSerializer(serializers.ModelSerializer):
     technician_profile = TechnicianMiniSerializer(source="technician.technician_profile", read_only=True)
     class Meta:
