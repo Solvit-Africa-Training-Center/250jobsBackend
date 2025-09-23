@@ -53,6 +53,8 @@ class UserAdminSerializer(serializers.ModelSerializer):
 class TechnicianProfileAdminSerializer(serializers.ModelSerializer):
     user_username = serializers.ReadOnlyField(source="user.username")
     has_active_subscription = serializers.SerializerMethodField()
+    criminal_record_is_expired = serializers.SerializerMethodField()
+    criminal_record_expiry_notice = serializers.SerializerMethodField()
 
     class Meta:
         model = TechnicianProfile
@@ -64,6 +66,12 @@ class TechnicianProfileAdminSerializer(serializers.ModelSerializer):
             "years_experience",
             "skills",
             "certificates",
+            "criminal_record",
+            "criminal_record_uploaded_at",
+            "criminal_record_expires_at",
+            "criminal_record_is_expired",
+            "criminal_record_expiry_notice",
+            "national_id_document",
             "location",
             "is_approved",
             "is_paused",
@@ -75,6 +83,13 @@ class TechnicianProfileAdminSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "user",
             "user_username",
+            "certificates",
+            "criminal_record",
+            "criminal_record_uploaded_at",
+            "criminal_record_expires_at",
+            "criminal_record_is_expired",
+            "criminal_record_expiry_notice",
+            "national_id_document",
             "trial_ends_at",
             "rating_avg",
             "rating_count",
@@ -92,6 +107,14 @@ class TechnicianProfileAdminSerializer(serializers.ModelSerializer):
             end_date__gte=now,
         ).exists()
 
+    def get_criminal_record_is_expired(self, obj):
+        return obj.criminal_record_is_expired
+
+    def get_criminal_record_expiry_notice(self, obj):
+        expires_at = obj.criminal_record_expires_at
+        if expires_at:
+            return f"Criminal record expires on {expires_at.isoformat()} (valid for 6 months)."
+        return "Criminal record missing; technicians must upload a record that is valid for 6 months."
 
 class TechnicianAdminMinimalSerializer(serializers.ModelSerializer):
     user_username = serializers.ReadOnlyField(source="user.username")
@@ -122,3 +145,5 @@ class SubscriptionAdminSerializer(serializers.ModelSerializer):
             "end_date",
             "created_at",
         ]
+
+

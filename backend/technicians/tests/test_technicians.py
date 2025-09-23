@@ -1,10 +1,18 @@
 # technicians/tests/test_technicians_api.py
-from django.contrib.auth import get_user_model
-from django.urls import reverse
-from rest_framework.test import APITestCase, APIClient
-from technicians.models import TechnicianProfile, Skill
-from django.utils import timezone
+import shutil
+import tempfile
 from datetime import timedelta
+
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+from django.urls import reverse
+from django.utils import timezone
+from rest_framework.test import APITestCase, APIClient
+
+from technicians.models import TechnicianProfile, Skill
+from technicians.serializers import TechnicianProfileEditSerializer
+
 
 User = get_user_model()
 
@@ -96,3 +104,63 @@ class TechnicianAPITests(APITestCase):
         resp = self.client.get(url)
         # Employer has no technician_profile; should 403 or error; our permission is IsTechnician -> 403
         self.assertEqual(resp.status_code, 403)
+
+
+class TechnicianCredentialTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        self._temp_media = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(self._temp_media, ignore_errors=True))
+        override = override_settings(MEDIA_ROOT=self._temp_media)
+        override.enable()
+        self.addCleanup(override.disable)
+        self.user = User.objects.create_user(
+            username="credtech",
+            password="pass",
+            role="technician",
+            location="Kigali",
+            email="credtech@example.com",
+        )
+        self.profile = TechnicianProfile.objects.get(user=self.user)
+
+    def test_criminal_record_upload_sets_expiry(self):
+        upload = SimpleUploadedFile('record.pdf', b'dummy data', content_type='application/pdf')
+        self.profile.criminal_record = upload
+        self.profile.save()
+        self.assertIsNotNone(self.profile.criminal_record_uploaded_at)
+        self.assertIsNotNone(self.profile.criminal_record_expires_at)
+        delta_seconds = (self.profile.criminal_record_expires_at - self.profile.criminal_record_uploaded_at).total_seconds()
+        expected_seconds = timedelta(days=180).total_seconds()
+        self.assertAlmostEqual(delta_seconds, expected_seconds, delta=2)
+        self.assertFalse(self.profile.criminal_record_is_expired)
+
+    def test_criminal_record_clear_resets_fields(self):
+        upload = SimpleUploadedFile('record.pdf', b'second dummy', content_type='application/pdf')
+        self.profile.criminal_record = upload
+        self.profile.save()
+        self.profile.criminal_record.delete(save=False)
+        self.profile.criminal_record = None
+        self.profile.save()
+        self.assertIsNone(self.profile.criminal_record_uploaded_at)
+        self.assertIsNone(self.profile.criminal_record_expires_at)
+
+    def test_criminal_record_is_expired_flag(self):
+        self.profile.criminal_record_expires_at = timezone.now() - timedelta(days=1)
+        self.assertTrue(self.profile.criminal_record_is_expired)
+        self.profile.criminal_record_expires_at = timezone.now() + timedelta(days=1)
+        self.assertFalse(self.profile.criminal_record_is_expired)
+
+    def test_profile_edit_serializer_expiry_notice(self):
+        serializer = TechnicianProfileEditSerializer(instance=self.profile)
+        data = serializer.data
+        self.assertIn('criminal_record_expiry_notice', data)
+        self.assertIn('6 months', data['criminal_record_expiry_notice'])
+        upload = SimpleUploadedFile('record.pdf', b'latest dummy', content_type='application/pdf')
+        self.profile.criminal_record = upload
+        self.profile.save()
+        serializer = TechnicianProfileEditSerializer(instance=self.profile)
+        new_data = serializer.data
+        self.assertIn(self.profile.criminal_record_expires_at.isoformat(), new_data['criminal_record_expiry_notice'])
+        self.assertFalse(new_data['criminal_record_is_expired'])
+
+

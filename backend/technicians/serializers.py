@@ -53,7 +53,7 @@ class TechnicianDetailSerializer(serializers.ModelSerializer):
 class TechnicianProfileEditSerializer(serializers.ModelSerializer):
     skill_names = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
     years_experience = serializers.IntegerField(min_value=0, max_value=60, required=False)
-    
+
     id = serializers.IntegerField(read_only=True)
     first_name = serializers.CharField(source="user.first_name", required=False, allow_blank=True)
     last_name = serializers.CharField(source="user.last_name", required=False, allow_blank=True)
@@ -62,6 +62,10 @@ class TechnicianProfileEditSerializer(serializers.ModelSerializer):
     is_approved = serializers.BooleanField(read_only=True)
     rating_avg = serializers.DecimalField(max_digits=3, decimal_places=2, read_only=True)
     rating_count = serializers.IntegerField(read_only=True)
+    criminal_record_uploaded_at = serializers.DateTimeField(read_only=True)
+    criminal_record_expires_at = serializers.DateTimeField(read_only=True)
+    criminal_record_is_expired = serializers.SerializerMethodField()
+    criminal_record_expiry_notice = serializers.SerializerMethodField()
 
     class Meta:
         model = TechnicianProfile
@@ -76,12 +80,20 @@ class TechnicianProfileEditSerializer(serializers.ModelSerializer):
             "skills",
             "skill_names",
             "certificates",
+            "criminal_record",
+            "criminal_record_uploaded_at",
+            "criminal_record_expires_at",
+            "criminal_record_is_expired",
+            "criminal_record_expiry_notice",
+            "national_id_document",
             "is_approved",
             "rating_avg",
             "rating_count",
         ]
         extra_kwargs = {
             "certificates": {"required": False, "allow_null": True},
+            "criminal_record": {"required": False, "allow_null": True},
+            "national_id_document": {"required": False, "allow_null": True},
             "bio": {"required": False, "allow_blank": True},
             "location": {"required": False, "allow_blank": True},
         }
@@ -109,8 +121,26 @@ class TechnicianProfileEditSerializer(serializers.ModelSerializer):
                 skill_objs.append(obj)
             instance.skills.set(skill_objs)
 
+        if "criminal_record" in validated_data and not validated_data["criminal_record"]:
+            if instance.criminal_record:
+                instance.criminal_record.delete(save=False)
+            instance.criminal_record = None
+
+        if "national_id_document" in validated_data and not validated_data["national_id_document"]:
+            if instance.national_id_document:
+                instance.national_id_document.delete(save=False)
+            instance.national_id_document = None
+
         return super().update(instance, validated_data)
 
+    def get_criminal_record_is_expired(self, obj):
+        return obj.criminal_record_is_expired
+
+    def get_criminal_record_expiry_notice(self, obj):
+        expires_at = obj.criminal_record_expires_at
+        if expires_at:
+            return f"Criminal record expires on {expires_at.isoformat()} (valid for 6 months)."
+        return "Criminal record not submitted yet. Once uploaded it remains valid for 6 months."
 
 class ReviewSerializer(serializers.ModelSerializer):
     technician_id = serializers.IntegerField(source="technician.id", read_only=True)
@@ -132,3 +162,5 @@ class ReviewSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"technician": "Technician not found or not provided"})
         reviewer = self.context["request"].user
         return Review.objects.create(technician=technician_profile, reviewer=reviewer, **validated_data)
+
+

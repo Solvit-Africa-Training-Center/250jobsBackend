@@ -10,11 +10,13 @@ class TechnicianProfileAdmin(admin.ModelAdmin):
         "years_experience",
         "is_approved",
         "is_paused",
+        "criminal_record_status",
+        "criminal_record_expires_at",
         "trial_ends_at",
         "rating_avg",
         "rating_count",
     )
-    list_filter = ("is_approved", "is_paused", "years_experience", "location")
+    list_filter = ("is_approved", "is_paused", "years_experience", "location", "criminal_record_expires_at")
     search_fields = ("user__username", "user__email", "location", "skills__name")
     actions = [
         "approve_selected_profiles",
@@ -22,6 +24,12 @@ class TechnicianProfileAdmin(admin.ModelAdmin):
         "pause_selected_profiles",
         "resume_selected_profiles",
     ]
+
+    @admin.display(description="Criminal record")
+    def criminal_record_status(self, obj):
+        if not obj.criminal_record:
+            return "Missing"
+        return "Expired" if obj.criminal_record_is_expired else "Valid"
 
     @admin.action(description="Approve selected technicians")
     def approve_selected_profiles(self, request, queryset):
