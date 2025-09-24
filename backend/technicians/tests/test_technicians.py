@@ -164,3 +164,29 @@ class TechnicianCredentialTests(APITestCase):
         self.assertFalse(new_data['criminal_record_is_expired'])
 
 
+
+    def test_put_update_requires_both_documents(self):
+        self.client.force_authenticate(self.user)
+        url = reverse("technician-me")
+        payload = {
+            "criminal_record": SimpleUploadedFile("record.pdf", b"new criminal", content_type="application/pdf"),
+        }
+        response = self.client.put(url, payload, format="multipart")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("national_id_document", response.data)
+
+    def test_put_updates_both_documents_successfully(self):
+        self.client.force_authenticate(self.user)
+        url = reverse("technician-me")
+        payload = {
+            "criminal_record": SimpleUploadedFile("record.pdf", b"criminal content", content_type="application/pdf"),
+            "national_id_document": SimpleUploadedFile("id.pdf", b"id content", content_type="application/pdf"),
+        }
+        response = self.client.put(url, payload, format="multipart")
+        self.assertEqual(response.status_code, 200)
+        self.profile.refresh_from_db()
+        self.assertTrue(self.profile.criminal_record.name.startswith("criminal_records/"))
+        self.assertTrue(self.profile.national_id_document.name.startswith("identity_docs/"))
+        self.assertIsNotNone(self.profile.criminal_record_uploaded_at)
+        self.assertIsNotNone(self.profile.criminal_record_expires_at)
+
