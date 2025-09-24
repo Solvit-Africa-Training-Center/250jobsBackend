@@ -67,6 +67,19 @@ class MyTechnicianProfileView(generics.RetrieveUpdateAPIView):
             pass
         return profile
 
+    def put(self, request, *args, **kwargs):
+        required_fields = {"criminal_record", "national_id_document"}
+        missing_fields = []
+        for field in required_fields:
+            value = request.data.get(field)
+            if not value:
+                missing_fields.append(field)
+        if missing_fields:
+            errors = {field: ["This field is required when updating credentials."] for field in missing_fields}
+            raise drf_serializers.ValidationError(errors)
+        kwargs["partial"] = True
+        return super().update(request, *args, **kwargs)
+
 
 class TechnicianReviewsView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
@@ -116,3 +129,4 @@ class TechnicianMyApplicationsView(generics.ListAPIView):
                 .filter(technician_id=self.request.user.id)
                 .select_related("job")
                 .order_by("-created_at"))
+
