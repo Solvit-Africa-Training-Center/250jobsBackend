@@ -39,7 +39,7 @@ if ENV_PATH.exists():
 SECRET_KEY = 'django-insecure-ao0lf@cd#@s5oi9kjxuo94h2#k(4n-js9&qw@owwo8%h0dg9^l'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -209,6 +209,20 @@ except Exception:
             "BACKEND": "channels.layers.InMemoryChannelLayer",
         }
     }
+# Honor proxy headers so generated absolute URLs use the correct scheme/host when behind a load balancer
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
 
 
+def _split_env_list(value: str):
+    return [item.strip() for item in value.split(',') if item.strip()]
+
+
+CSRF_TRUSTED_ORIGINS = _split_env_list(os.getenv('CSRF_TRUSTED_ORIGINS', ''))
+render_host = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+if render_host:
+    for proto in ('https://', 'http://'):
+        origin = f"{proto}{render_host}"
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
 
